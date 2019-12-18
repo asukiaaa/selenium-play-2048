@@ -1,13 +1,30 @@
+# import sys
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 
-browser = webdriver.Firefox()
+# print(sys.argv)
+url = 'http://localhost:4444/wd/hub'
+print(url)
+print(webdriver.DesiredCapabilities.FIREFOX)
+
+# browser = webdriver.Remote(command_executor=url,desired_capabilities={})
+browser = webdriver.Remote(command_executor=url, desired_capabilities=webdriver.DesiredCapabilities.FIREFOX)
+
+# browser = webdriver.Firefox()
+
 browser.get('https://www.quaxio.com/2048/')
-# browser.find_element_by_id("lst-ib").send_keys("Python")
-# browser.find_element_by_name("btnK").click()
+
+print(browser.command_executor._url)
+print(browser.command_executor)
+print(browser.session_id)
 
 actions = ActionChains(browser)
+
+actions.send_keys(Keys.ARROW_UP)
+actions.send_keys(Keys.ARROW_RIGHT)
+actions.perform()
+
 while (True):
   input("press enter to continue")
   for _ in range(10):
