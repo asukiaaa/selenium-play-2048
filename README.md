@@ -21,7 +21,7 @@ SESSION_ID=`python3 src/startSession.py`
 
 Run job.
 ```
-pytnon3 src/scanCells.py $SESSION_ID
+pytnon3 src/solve2048.py $SESSION_ID
 ```
 
 # References

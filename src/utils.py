@@ -1,72 +1,41 @@
-import sys
-from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.remote.webelement import WebElement
 from time import sleep
 from typing import List
 
-print(sys.argv)
-# url = sys.argv[1] + '/wd/hub'
-executor_url = 'http://localhost:4444/wd/hub'
-# session_id = sys.argv[2]
-session_id = sys.argv[1]
-
-capabilities = webdriver.DesiredCapabilities.FIREFOX
-
-# capabilities['sessionId'] = session_id
-# https://selenium.dev/selenium/docs/api/rb/Selenium/WebDriver/Remote/Capabilities.html
-
-print(capabilities)
-
-# browser = webdriver.Remote(command_executor=url,desired_capabilities={})
-browser = webdriver.Remote(
-    command_executor=executor_url, desired_capabilities=capabilities)
-# browser = webdriver.Remote(command_executor=url, desired_capabilities=capabilities, sessionId=session_id)
-# browser.get('https://www.quaxio.com/2048/')
-
-# https://selenium.dev/selenium/docs/api/py/webdriver/selenium.webdriver.common.desired_capabilities.html
-
-# print('print executer url')
-# print(browser.command_executor._url)
-# print(browser.session_id)
-
-browser.close()
-browser.session_id = session_id
-print(browser.session_id)
-
 go_delay_second = 0.1
 
 
-def go_right():
+def go_right(browser, delay_second=go_delay_second):
     actions = ActionChains(browser)
     actions.send_keys(Keys.ARROW_RIGHT)
     actions.perform()
-    sleep(go_delay_second)
+    sleep(delay_second)
 
 
-def go_left():
+def go_left(browser, delay_second=go_delay_second):
     actions = ActionChains(browser)
     actions.send_keys(Keys.ARROW_LEFT)
     actions.perform()
-    sleep(go_delay_second)
+    sleep(delay_second)
 
 
-def go_up():
+def go_up(browser, delay_second=go_delay_second):
     actions = ActionChains(browser)
     actions.send_keys(Keys.ARROW_UP)
     actions.perform()
-    sleep(go_delay_second)
+    sleep(delay_second)
 
 
-def go_down():
+def go_down(browser, delay_second=go_delay_second):
     actions = ActionChains(browser)
     actions.send_keys(Keys.ARROW_DOWN)
     actions.perform()
-    sleep(go_delay_second)
+    sleep(delay_second)
 
 
-def get_number_of_cell(x: int, y: int):
+def get_number_of_cell(browser, x: int, y: int):
     cell_class = "tile-position-{}-{}".format(y+1, x+1)
     cell_elems = browser.find_elements_by_class_name(cell_class)
     elems_len = len(cell_elems)
@@ -82,16 +51,16 @@ def get_number_of_cell(x: int, y: int):
         return int(text)
 
 
-def get_boad_cells():
+def get_boad_cells(browser):
     boad_cells = []
     for x in range(4):
         row_cells = []
         for y in range(4):
             try:
-                row_cells.append(get_number_of_cell(x, y))
+                row_cells.append(get_number_of_cell(browser, x, y))
             except Exception as e:
                 print('caused error try again', x, y, e)
-                row_cells.append(get_number_of_cell(x, y))
+                row_cells.append(get_number_of_cell(browser, x, y))
         boad_cells.append(row_cells)
     return boad_cells
 
@@ -299,16 +268,10 @@ def get_better_direction_to_joint(cells: List[List[int]], focused_row_index: int
     print(after_cells)
 
 
-prev_boad_cells = None
-same_state_count = 0
-
-prev_else_action = None
-
-
-def handle_for_row(cells: List[List[int]], target_row_index: int) -> bool:
+def handle_for_row(browser, cells: List[List[int]], target_row_index: int) -> bool:
     if not is_row_filled_to_right(cells[target_row_index]):
         print('right because top is not filled')
-        go_right()
+        go_right(browser)
     # DONE 右上に小さい駒が入っていたら、そちらに注力したい
     # TODO その消したい駒より大きいものが存在するなら、まずそれを消したい
     elif (
@@ -318,70 +281,26 @@ def handle_for_row(cells: List[List[int]], target_row_index: int) -> bool:
         # and is_row_keeps_larger_right(cells[target_row_index])
     ):
         print('up left to joint left upper')
-        go_left()
-        go_up()
+        go_left(browser)
+        go_up(browser)
     elif row_has_none(cells[target_row_index]) and there_are_cell_to_fill_row_none(cells, target_row_index):
         print('up to fill top none')
-        go_up()
+        go_up(browser)
     elif jointable_by_up(cells) and row_has_jointable_cells(cells[target_row_index]):
         dir = get_better_direction_to_joint(cells, target_row_index)
         print('dir', dir)
         if dir == 'right':
             print('go right because better than up')
-            go_right()
+            go_right(browser)
         else:
             print('go up because better than up')
-            go_up()
+            go_up(browser)
     elif jointable_by_up(cells):
         print('up because jointable upper')
-        go_up()
+        go_up(browser)
     elif row_has_jointable_cells(cells[target_row_index]):
         print('right because top have jointable cells')
-        go_right()
+        go_right(browser)
     else:
         return False
     return True
-
-
-while True:
-    boad_cells = get_boad_cells() if prev_boad_cells is None else prev_boad_cells
-    print(boad_cells)
-    else_action = None
-    if handle_for_row(boad_cells, 0):
-        # something if handled for 0
-        print('handled for row 0')
-    elif handle_for_row(boad_cells, 1):
-        # something if handled for 1
-        print('handled for row 1')
-    elif handle_for_row(boad_cells, 2):
-        # something if handled for 1
-        print('handled for row 2')
-    else:
-        if prev_else_action == 'right':
-            print('up as else')
-            else_action = 'up'
-            go_up()
-        else:
-            print('right as else')
-            else_action = 'right'
-            go_right()
-    prev_else_action = else_action
-    boad_cells = get_boad_cells()
-    if prev_boad_cells is not None:
-        if is_same_boad_cells(prev_boad_cells, boad_cells):
-            same_state_count += 1
-        else:
-            same_state_count = 0
-        if same_state_count > 2:
-            print('is same boards')
-            go_left()
-            boad_cells = get_boad_cells()
-            if is_same_boad_cells(prev_boad_cells, boad_cells):
-                print('still same boards')
-                go_right()
-            boad_cells = get_boad_cells()
-            if is_same_boad_cells(prev_boad_cells, boad_cells):
-                break
-            boad_cells = get_boad_cells()
-
-    prev_boad_cells = boad_cells
