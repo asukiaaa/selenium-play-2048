@@ -1,4 +1,5 @@
 import sys
+import gc
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
@@ -79,3 +80,4 @@ while True:
                     break
             boad = utils.read_to_create_boad(browser)
     prev_boad = boad
+    gc.collect()
