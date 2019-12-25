@@ -29,6 +29,7 @@ CellValue = TypeVar('CellType', int, str, None)
 RowCells = List[CellValue]
 BoadCells = List[RowCells]
 
+
 class Boad:
     def __init__(self, cells: BoadCells):
         self.cells = cells
@@ -121,6 +122,46 @@ def go_down(browser, delay_second=go_delay_second):
     actions.send_keys(Keys.ARROW_DOWN)
     actions.perform()
     sleep(delay_second)
+
+# def get_number_of_cell_from_tile_emenents(elements: [WebElement], x: int, y: int) -> CellValue:
+#     cell_class = "tile-position-{}-{}".format(y+1, x+1)
+#     target_elements = []
+#     for elem in elements:
+#         if cell_class in elem.get_attribute('class'):
+#             target_elements.append(elem)
+#     elem_len = len(target_elements)
+#     target_element = None
+#     if elem_len == 0:
+#         return None
+#     elif elem_len == 1:
+#         target_element = target_elements[0]
+#     else:
+#         for elem in target_elements:
+#             if 'tile-merged' in elem.get_attribute('class'):
+#                 target_element = elem
+#                 break
+#     text = target_element.find_element_by_class_name('tile-inner').text
+#     return int(text)
+
+
+# def read_boad_cells(browser, retry_count=1):
+#     try:
+#         boad_cells = []
+#         tile_elements = browser.find_elements_by_css_selector(
+#             '.tile-container .tile')
+#         for x in range(4):
+#             row_cells = []
+#             for y in range(4):
+#                 row_cells.append(
+#                     get_number_of_cell_from_tile_emenents(tile_elements, x, y))
+#             boad_cells.append(row_cells)
+#         return boad_cells
+#     except Exception as e:
+#         if retry_count > 0:
+#             return read_boad_cells(browser, retry_count-1)
+#         else:
+#             print(e)
+#             raise 'cannot read tile numbers'
 
 
 def read_number_of_cell(browser, x: int, y: int):
