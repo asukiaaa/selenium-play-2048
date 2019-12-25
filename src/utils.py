@@ -2,7 +2,8 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.remote.webelement import WebElement
 from time import sleep
-from typing import List
+from typing import List, TypeVar, Type, Dict
+
 
 go_delay_second = 0.1
 
@@ -24,22 +25,33 @@ def create_key_from_actions(actions: List[str]):
     return key
 
 
+CellValue = TypeVar('CellType', int, str, None)
+RowCells = List[CellValue]
+BoadCells = List[RowCells]
+
 class Boad:
-    def __init__(self, cells: List[List[int]]):
+    def __init__(self, cells: BoadCells):
         self.cells = cells
-        self.boads_after = {}
+        self.boads_after: Dict[str, Type[Boad]] = {}
         self.rotated_clockwize_cells = None
 
     def is_same(self, boad) -> bool:
         return is_same_boad_cells(boad.cells, self.cells)
 
-    def load_or_create_rotated_clockwize_cells(self) -> List[List[int]]:
+    def load_or_create_rotated_clockwize_cells(self) -> BoadCells:
         cells = self.rotated_clockwize_cells
         if cells is not None:
             return cells
-        cells = create_cells_rotated_clockwize(cells)
+        cells = create_cells_rotated_clockwize(self.cells)
         self.rotated_clockwize_cells = cells
         return cells
+
+    def is_jointable_by_up(self) -> bool:
+        cells = self.load_or_create_rotated_clockwize_cells()
+        for y in range(4):
+            if row_has_jointable_cells(cells[y]):
+                return True
+        return False
 
     def is_movable_up(self) -> bool:
         return is_movable_left_cells(self.load_or_create_rotated_clockwize_cells())
@@ -77,7 +89,7 @@ class Boad:
         before_actions = actions.copy()
         before_action = before_actions.pop()
         before_boad = self if len(
-            before_actions) == 0 else self.load_or_create_boad_after_actions(befire_actions)
+            before_actions) == 0 else self.load_or_create_boad_after_actions(before_actions)
         boad = before_boad.load_or_create_boad_after_action(before_action)
         self.boads_after[key] = boad
         return boad
@@ -146,25 +158,25 @@ def read_to_create_boad(browser):
     return Boad(cells)
 
 
-def is_movable_left_cells(cells: List[List[int]]) -> bool:
+def is_movable_left_cells(cells: BoadCells) -> bool:
     for y in range(4):
         if is_movable_left_row(cells[y]):
             return True
     return False
 
 
-def is_movable_right_cells(cells: List[List[int]]) -> bool:
+def is_movable_right_cells(cells: BoadCells) -> bool:
     for y in range(4):
         if is_movable_right_row(cells[y]):
             return True
     return False
 
 
-def is_movable_horizontal_row(row_cells: List[int]):
+def is_movable_horizontal_row(row_cells: RowCells):
     return row_has_cell(row_cells) and (row_has_jointable_cells(row_cells) or row_has_none(row_cells))
 
 
-def is_movable_right_row(row_cells: List[int]):
+def is_movable_right_row(row_cells: RowCells):
     if row_has_jointable_cells(row_cells):
         return True
     prev_cell_index = None
@@ -178,7 +190,7 @@ def is_movable_right_row(row_cells: List[int]):
     return False
 
 
-def is_movable_left_row(row_cells: List[int]):
+def is_movable_left_row(row_cells: RowCells):
     if row_has_jointable_cells(row_cells):
         return True
     prev_none_index = None
@@ -192,7 +204,7 @@ def is_movable_left_row(row_cells: List[int]):
     return False
 
 
-def row_has_jointable_cells(row_cells: List[int]) -> bool:
+def row_has_jointable_cells(row_cells: RowCells) -> bool:
     before_cell = None
     for x in range(4):
         c = row_cells[x]
@@ -203,21 +215,21 @@ def row_has_jointable_cells(row_cells: List[int]) -> bool:
     return False
 
 
-def row_has_cell(row_cells: List[int]) -> bool:
+def row_has_cell(row_cells: RowCells) -> bool:
     for x in range(4):
         if row_cells[x] is not None:
             return True
     return False
 
 
-def row_has_none(row_cells: List[int]) -> bool:
+def row_has_none(row_cells: RowCells) -> bool:
     for x in range(4):
         if row_cells[x] is None:
             return True
     return False
 
 
-def there_are_cell_to_fill_row_none(cells: List[List[int]], row_index: int):
+def there_are_cell_to_fill_row_none(cells: BoadCells, row_index: int):
     for x in range(4):
         if cells[row_index][x]is None:
             for y in range(4):
@@ -226,15 +238,7 @@ def there_are_cell_to_fill_row_none(cells: List[List[int]], row_index: int):
     return False
 
 
-def jointable_by_up(cells):
-    rotated_cells = create_cells_rotated_clockwize(cells)
-    for y in range(4):
-        if row_has_jointable_cells(rotated_cells[y]):
-            return True
-    return False
-
-
-def is_fixed_row(row_cells: List[int]):
+def is_fixed_row(row_cells: RowCells):
     for x in range(3):
         left = row_cells[x]
         right = row_cells[x+1]
@@ -243,7 +247,7 @@ def is_fixed_row(row_cells: List[int]):
     return True
 
 
-def get_row_cells_after_left(row_cells: List[int]) -> List[int]:
+def create_row_cells_after_left(row_cells: RowCells) -> RowCells:
     new_cells = []
     merged_indexes = []
     for cell in row_cells:
@@ -259,18 +263,19 @@ def get_row_cells_after_left(row_cells: List[int]) -> List[int]:
             new_cells.append(cell)
     while len(new_cells) < 4:
         new_cells.append(None)
+        # new_cells.append('2or4')
     return new_cells
 
 
-def get_row_cells_after_right(row_cells: List[int]) -> List[int]:
+def create_row_cells_after_right(row_cells: RowCells) -> RowCells:
     reversed_cells = row_cells.copy()
     reversed_cells.reverse()
-    reversed_left_cells = get_row_cells_after_left(reversed_cells)
+    reversed_left_cells = create_row_cells_after_left(reversed_cells)
     reversed_left_cells.reverse()
     return reversed_left_cells
 
 
-def create_cells_rotated_clockwize(cells: List[List[int]]) -> List[List[int]]:
+def create_cells_rotated_clockwize(cells: BoadCells) -> BoadCells:
     rotated_cells = []
     for y in range(4):
         row = []
@@ -280,7 +285,7 @@ def create_cells_rotated_clockwize(cells: List[List[int]]) -> List[List[int]]:
     return rotated_cells
 
 
-def create_cells_rotated_counter_clockwize(cells: List[List[int]]) -> List[List[int]]:
+def create_cells_rotated_counter_clockwize(cells: BoadCells) -> BoadCells:
     rotated_cells = []
     for y in range(4):
         row = []
@@ -290,27 +295,27 @@ def create_cells_rotated_counter_clockwize(cells: List[List[int]]) -> List[List[
     return rotated_cells
 
 
-def create_cells_after_left(cells: List[List[int]]) -> List[List[int]]:
+def create_cells_after_left(cells: BoadCells) -> BoadCells:
     new_cells = []
     for y in range(4):
-        new_cells.append(get_row_cells_after_left(cells[y]))
+        new_cells.append(create_row_cells_after_left(cells[y]))
     return new_cells
 
 
-def create_cells_after_right(cells: List[List[int]]) -> List[List[int]]:
+def create_cells_after_right(cells: BoadCells) -> BoadCells:
     new_cells = []
     for y in range(4):
-        new_cells.append(get_row_cells_after_right(cells[y]))
+        new_cells.append(create_row_cells_after_right(cells[y]))
     return new_cells
 
 
-def create_cells_after_up(cells: List[List[int]]):
+def create_cells_after_up(cells: BoadCells):
     rotated_cells = create_cells_rotated_counter_clockwize(cells)
     rotated_then_left_cells = create_cells_after_left(rotated_cells)
     return create_cells_rotated_clockwize(rotated_then_left_cells)
 
 
-def jointable_by_left_up(cells: List[int], upper_row_index: int):
+def jointable_by_left_up(cells: RowCells, upper_row_index: int):
     after_left_cells = create_cells_after_left(cells)
     for x in range(3):
         upper = after_left_cells[upper_row_index][x]
@@ -320,7 +325,7 @@ def jointable_by_left_up(cells: List[int], upper_row_index: int):
     return False
 
 
-def is_row_keeps_larger_right(row_cells: List[int]) -> bool:
+def is_row_keeps_larger_right(row_cells: RowCells) -> bool:
     left = row_cells[0]
     right_index = 1
     while right_index < len(row_cells):
@@ -334,7 +339,7 @@ def is_row_keeps_larger_right(row_cells: List[int]) -> bool:
     return True
 
 
-def get_mininum_cell_in_row(row_cells: List[int]) -> int or None:
+def get_mininum_cell_in_row(row_cells: RowCells) -> int or None:
     min_cell = None
     for x in range(4):
         c = row_cells[x]
@@ -345,7 +350,7 @@ def get_mininum_cell_in_row(row_cells: List[int]) -> int or None:
     return min_cell
 
 
-def get_better_direction_to_joint(cells: List[List[int]], focused_row_index: int) -> List[str]:
+def get_better_direction_to_joint(cells: BoadCells, focused_row_index: int) -> List[str]:
     after_cells = {
         'right': create_cells_after_right(cells),
         # 'left': create_cells_after_left(cells),
@@ -383,7 +388,7 @@ def handle_for_row(browser, boad, target_row_index: int) -> bool:
     # DONE 右上に小さい駒が入っていたら、そちらに注力したい
     # TODO その消したい駒より大きいものが存在するなら、まずそれを消したい
     elif (
-        not jointable_by_up(cells)
+        not boad.is_jointable_by_up()
         and is_fixed_row(cells[target_row_index])
         and jointable_by_left_up(cells, target_row_index)
         # and is_row_keeps_larger_right(cells[target_row_index])
@@ -394,7 +399,7 @@ def handle_for_row(browser, boad, target_row_index: int) -> bool:
     elif row_has_none(cells[target_row_index]) and there_are_cell_to_fill_row_none(cells, target_row_index):
         print('up to fill top none')
         go_up(browser)
-    elif jointable_by_up(cells) and row_has_jointable_cells(cells[target_row_index]):
+    elif boad.is_jointable_by_up() and row_has_jointable_cells(cells[target_row_index]):
         dir = get_better_direction_to_joint(cells, target_row_index)
         print('dir', dir)
         if dir == 'right':
@@ -403,7 +408,7 @@ def handle_for_row(browser, boad, target_row_index: int) -> bool:
         else:
             print('go up because better than up')
             go_up(browser)
-    elif jointable_by_up(cells):
+    elif boad.is_jointable_by_up():
         print('up because jointable upper')
         go_up(browser)
     elif row_has_jointable_cells(cells[target_row_index]):
