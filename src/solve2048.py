@@ -20,22 +20,22 @@ browser.close()
 browser.session_id = session_id
 print(browser.session_id)
 
-prev_boad_cells = None
+prev_boad = None
 same_state_count = 0
 prev_else_action = None
-cells_on_down = None
+boad_on_down = None
 
 while True:
-    boad_cells = utils.get_boad_cells(browser) if prev_boad_cells is None else prev_boad_cells
-    print(boad_cells)
+    boad = utils.read_to_create_boad(browser)
+    print(boad.cells)
     else_action = None
-    if utils.handle_for_row(browser, boad_cells, 0):
+    if utils.handle_for_row(browser, boad, 0):
         # something if handled for 0
         print('handled for row 0')
-    elif utils.handle_for_row(browser, boad_cells, 1):
+    elif utils.handle_for_row(browser, boad, 1):
         # something if handled for 1
         print('handled for row 1')
-    elif utils.handle_for_row(browser, boad_cells, 2):
+    elif utils.handle_for_row(browser, boad, 2):
         # something if handled for 1
         print('handled for row 2')
     else:
@@ -48,32 +48,34 @@ while True:
             else_action = 'right'
             utils.go_right(browser)
     prev_else_action = else_action
-    boad_cells = utils.get_boad_cells(browser)
-    if prev_boad_cells is not None:
-        if utils.is_same_boad_cells(prev_boad_cells, boad_cells):
+    boad = utils.read_to_create_boad(browser)
+    if prev_boad is not None:
+        if boad.is_same(prev_boad):
             same_state_count += 1
         else:
             same_state_count = 0
         if same_state_count > 2:
             print('is same boards')
             utils.go_left(browser)
-            boad_cells = utils.get_boad_cells(browser)
-            if utils.is_same_boad_cells(prev_boad_cells, boad_cells):
+            boad = utils.read_to_create_boad(browser)
+            if boad.is_same(prev_boad):
                 print('still same boards')
                 utils.go_right(browser)
-            boad_cells = utils.get_boad_cells(browser)
-            if utils.is_same_boad_cells(prev_boad_cells, boad_cells):
-                if cells_on_down is None:
+            boad = utils.read_to_create_boad(browser)
+            if boad.is_same(prev_boad):
+                print('same board so up down or finish')
+                print(boad.cells)
+                print(prev_boad)
+                if boad_on_down is None:
                     utils.go_down(browser)
                     utils.go_up(browser)
-                    boad_cells = utils.get_boad_cells(browser)
-                    cells_on_down = boad_cells
-                elif not utils.is_same_boad_cells(boad_cells, cells_on_down):
-                    boad_cells = utils.get_boad_cells(browser)
+                    boad = utils.read_to_create_boad(browser)
+                    boad_on_down = boad
+                elif not boad.is_same(prev_boad):
+                    boad = utils.read_to_create_boad(browser)
                     utils.go_down(browser)
                     utils.go_up(browser)
                 else:
                     break
-            boad_cells = utils.get_boad_cells(browser)
-
-    prev_boad_cells = boad_cells
+            boad = utils.read_to_create_boad(browser)
+    prev_boad = boad
