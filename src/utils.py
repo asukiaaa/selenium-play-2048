@@ -4,15 +4,23 @@ from selenium.webdriver.remote.webelement import WebElement
 from time import sleep
 from typing import List, TypeVar, Type, Dict
 
-
+CellValue = TypeVar('CellType', int, None)
+RowCells = List[CellValue]
+BoadCells = List[RowCells]
 go_delay_second = 0.1
 
 
-def is_same_boad_cells(boad1, boad2):
+def is_same_row_cells(row1: RowCells, row2: RowCells):
     for x in range(4):
-        for y in range(4):
-            if (boad1[y][x] != boad2[y][x]):
-                return False
+        if row1[x] != row2[x]:
+            return False
+    return True
+
+
+def is_same_boad_cells(boad1: BoadCells, boad2: BoadCells):
+    for y in range(4):
+        if not is_same_row_cells(boad1[y], boad2[y]):
+            return False
     return True
 
 
@@ -23,11 +31,6 @@ def create_key_from_actions(actions: List[str]):
             key += '_'
         key += action
     return key
-
-
-CellValue = TypeVar('CellType', int, str, None)
-RowCells = List[CellValue]
-BoadCells = List[RowCells]
 
 
 class Boad:
@@ -66,6 +69,10 @@ class Boad:
     def is_movable_down(self) -> bool:
         return is_movable_right_cells(self.load_or_create_rotated_clockwize_cells())
 
+    def will_change_row_by_actions(self, actions: List[str], row_index: int) -> bool:
+        boad = self.load_or_create_boad_after_actions(actions)
+        return not is_same_row_cells(boad.cells[row_index], self.cells[row_index])
+
     def load_or_create_boad_after_action(self, action: str):
         if action in self.boads_after:
             return self.boads_after[action]
@@ -76,12 +83,13 @@ class Boad:
             cells = create_cells_after_right(self.cells)
         elif action == 'up':
             cells = create_cells_rotated_counter_clockwize(
-                create_cells_after_left(self.load_or_create_rotated_clockwize_cells()))
+                create_cells_after_right(self.load_or_create_rotated_clockwize_cells()))
         elif action == 'down':
             cells = create_cells_rotated_counter_clockwize(
-                create_cells_after_right(self.load_or_create_rotated_clockwize_cells()))
-        self.boads_after[action] = cells
-        return Boad(cells)
+                create_cells_after_left(self.load_or_create_rotated_clockwize_cells()))
+        boad = Boad(cells)
+        self.boads_after[action] = boad
+        return boad
 
     def load_or_create_boad_after_actions(self, actions: List[str]):
         key = create_key_from_actions(actions)
@@ -343,27 +351,12 @@ def create_cells_after_left(cells: BoadCells) -> BoadCells:
     return new_cells
 
 
+# TODO make this as a function in Boad class
 def create_cells_after_right(cells: BoadCells) -> BoadCells:
     new_cells = []
     for y in range(4):
         new_cells.append(create_row_cells_after_right(cells[y]))
     return new_cells
-
-
-def create_cells_after_up(cells: BoadCells):
-    rotated_cells = create_cells_rotated_counter_clockwize(cells)
-    rotated_then_left_cells = create_cells_after_left(rotated_cells)
-    return create_cells_rotated_clockwize(rotated_then_left_cells)
-
-
-def jointable_by_left_up(cells: RowCells, upper_row_index: int):
-    after_left_cells = create_cells_after_left(cells)
-    for x in range(3):
-        upper = after_left_cells[upper_row_index][x]
-        lower = after_left_cells[upper_row_index+1][x]
-        if upper == lower and upper is not None:
-            return True
-    return False
 
 
 def is_row_keeps_larger_right(row_cells: RowCells) -> bool:
@@ -372,7 +365,7 @@ def is_row_keeps_larger_right(row_cells: RowCells) -> bool:
     while right_index < len(row_cells):
         right = row_cells[right_index]
         print('left right', left, right)
-        if left is not None and right is not None and left >= right:
+        if left is not None and right is not None and left > right:
             return False
         if right is not None:
             left = right
@@ -391,70 +384,49 @@ def get_mininum_cell_in_row(row_cells: RowCells) -> int or None:
     return min_cell
 
 
-def get_better_direction_to_joint(cells: BoadCells, focused_row_index: int) -> List[str]:
-    after_cells = {
-        'right': create_cells_after_right(cells),
-        # 'left': create_cells_after_left(cells),
-        'up': create_cells_after_up(cells),
-    }
-    if is_row_keeps_larger_right(after_cells['right'][0]):
-        return 'right'
-    elif is_row_keeps_larger_right(after_cells['up'][0]):
-        return 'up'
-    min_cell = {
-        'right': get_mininum_cell_in_row(after_cells['right'][0]),
-        'up': get_mininum_cell_in_row(after_cells['up'][0]),
-    }
-    if min_cell['right'] is None and min_cell['up'] is None:
-        raise 'consider'
-        return 'up'
-    elif min_cell['right'] is None or min_cell['up'] is None:
-        if min_cell['right'] is None:
-            return 'up'
-        else:
-            return 'right'
-    else:
-        if min_cell['right'] < min_cell['up']:
-            return 'up'
-        else:
-            return 'right'
-    print(after_cells)
-
-
 def handle_for_row(browser, boad, target_row_index: int) -> bool:
+    print('handling row', target_row_index)
     cells = boad.cells
+    target_row = boad.cells[target_row_index]
+    boad_after_up = boad.load_or_create_boad_after_action('up')
+    target_row_after_up = boad_after_up.cells[target_row_index]
+    print("boad.is_jointable_by_up()", boad.is_jointable_by_up()    )
+    print("is_fixed_row(target_row)", is_fixed_row(target_row))
+    print("boad.will_change_row_by_actions(['right', 'up']", boad.will_change_row_by_actions(['right', 'up'], target_row_index))
+    print("boad.will_change_row_by_actions(['left', 'up'], target_row_index)", boad.will_change_row_by_actions(['left', 'up'], target_row_index))
     if is_movable_right_row(cells[target_row_index]):
-        print('right because top is not filled')
-        go_right(browser)
+        print('target_row_after_up', target_row_after_up)
+        if not boad.is_same(boad_after_up) and is_row_keeps_larger_right(target_row_after_up):
+            print('up because top is not filled')
+            go_up(browser)
+        else:
+            print('right because top is not filled')
+            go_right(browser)
     # DONE 右上に小さい駒が入っていたら、そちらに注力したい
     # TODO その消したい駒より大きいものが存在するなら、まずそれを消したい
     elif (
-        not boad.is_jointable_by_up()
-        and is_fixed_row(cells[target_row_index])
-        and jointable_by_left_up(cells, target_row_index)
+        is_fixed_row(target_row)
+        and (boad.will_change_row_by_actions(['right', 'up'], target_row_index) or boad.will_change_row_by_actions(['left', 'up'], target_row_index))
         # and is_row_keeps_larger_right(cells[target_row_index])
     ):
-        print('up left to joint left upper')
-        go_left(browser)
-        go_up(browser)
-    elif row_has_none(cells[target_row_index]) and there_are_cell_to_fill_row_none(cells, target_row_index):
+        if boad.will_change_row_by_actions(['right', 'up'], target_row_index):
+            print('right up to joint right upper')
+            go_right(browser)
+            go_up(browser)
+        else:
+            print('left up to joint left upper')
+            go_left(browser)
+            go_up(browser)
+    elif row_has_none(target_row) and there_are_cell_to_fill_row_none(cells, target_row_index):
         print('up to fill top none')
         go_up(browser)
-    elif boad.is_jointable_by_up() and row_has_jointable_cells(cells[target_row_index]):
-        dir = get_better_direction_to_joint(cells, target_row_index)
-        print('dir', dir)
-        if dir == 'right':
-            print('go right because better than up')
-            go_right(browser)
-        else:
-            print('go up because better than up')
-            go_up(browser)
-    elif boad.is_jointable_by_up():
+    elif boad.is_jointable_by_up() and not is_same_row_cells(target_row, target_row_after_up):
         print('up because jointable upper')
         go_up(browser)
-    elif row_has_jointable_cells(cells[target_row_index]):
+    elif row_has_jointable_cells(target_row):
         print('right because top have jointable cells')
         go_right(browser)
     else:
+        print('does not handle row', target_row_index)
         return False
     return True
