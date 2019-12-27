@@ -174,18 +174,16 @@ def go_down(browser, delay_second=go_delay_second):
 
 def read_number_of_cell(browser, x: int, y: int):
     cell_class = "tile-position-{}-{}".format(y+1, x+1)
-    cell_elems = browser.find_elements_by_css_selector('div.tile.' + cell_class)
-    elems_len = len(cell_elems)
-    if elems_len == 0:
-        return None
-    elif elems_len == 1:
-        text = cell_elems[0].find_element_by_class_name('tile-inner').text
-        return int(text)
-    else:
-        # TODO able to improve
-        text = cell_elems[elems_len -
-                          1].find_element_by_class_name('tile-inner').text
-        return int(text)
+    cell_elem = None
+    try:
+        cell_elem = browser.find_element_by_css_selector('div.tile.' + cell_class + '.tile-merged')
+    except Exception:
+        try:
+            cell_elem = browser.find_element_by_css_selector('div.tile.' + cell_class)
+        except Exception:
+            return None
+    text = cell_elem.find_element_by_class_name('tile-inner').text
+    return int(text)
 
 
 def read_boad_cells(browser):
