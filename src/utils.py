@@ -97,39 +97,44 @@ class Boad:
         if key in self.boads_after:
             return self.boads_after[key]
         before_actions = actions.copy()
-        before_action = before_actions.pop()
+        last_action = before_actions.pop()
         before_boad = self if len(
             before_actions) == 0 else self.load_or_create_boad_after_actions(before_actions)
-        boad = before_boad.load_or_create_boad_after_action(before_action)
+        boad = before_boad.load_or_create_boad_after_action(last_action)
         self.boads_after[key] = boad
         return boad
 
-    def get_actions_to_increase_row(self, target_row_index: int):
+    def get_actions_for_row(self, target_row_index: int):
         candidate_actions = [
             ['up'],
-            ['left'],
             ['right'],
+            ['left'],
             # ['up', 'right'],
             # ['up', 'left'],
             ['right', 'up'],
-            ['left', 'up'],
             ['right', 'right', 'up'],
-            # ['up', 'right', 'up'],
+            ['left', 'up'],
+            # # ['up', 'right', 'up'],
             ['left', 'left', 'up'],
-            # ['up', 'left', 'up'],
+            # # ['up', 'left', 'up'],
+            # ['up', 'up'],
         ]
         current_row = self.cells[target_row_index]
         best_actions_row_points = 0
         best_actions = None
+        need_to_keep_larger = is_row_keeps_larger_right(current_row)
         for actions in candidate_actions:
             boad = self.load_or_create_boad_after_actions(actions)
             row = boad.cells[target_row_index]
-            if not is_same_row_cells(current_row, row):
-                if is_row_keeps_larger_right(row):
-                    points = get_row_points(row)
-                    if points > best_actions_row_points:
-                        best_actions_row_points = points
-                        best_actions = actions
+            if (
+                not is_same_row_cells(current_row, row)
+                and (not need_to_keep_larger or is_row_keeps_larger_right(row))
+                and is_row_filled_right(row)
+            ):
+                points = get_row_points(row)
+                if points > best_actions_row_points:
+                    best_actions_row_points = points
+                    best_actions = actions
         return best_actions
 
     def create_next_by_actions(self, browser, actions: List[str]):
@@ -138,7 +143,8 @@ class Boad:
             boad_after_action = boad.load_or_create_boad_after_action(action)
             tile_go(browser, action)
             if not boad.is_same(boad_after_action):
-                boad = boad_after_action.create_boad_by_read_and_insert_new_tile(browser)
+                boad = boad_after_action.create_boad_by_read_and_insert_new_tile(
+                    browser)
         return boad
 
     def create_boad_by_read_and_insert_new_tile(self, browser):
@@ -261,10 +267,12 @@ def read_number_of_cell(browser, x: int, y: int):
     cell_class = "tile-position-{}-{}".format(y+1, x+1)
     cell_elem = None
     try:
-        cell_elem = browser.find_element_by_css_selector('div.tile.' + cell_class + '.tile-merged')
+        cell_elem = browser.find_element_by_css_selector(
+            'div.tile.' + cell_class + '.tile-merged')
     except Exception:
         try:
-            cell_elem = browser.find_element_by_css_selector('div.tile.' + cell_class)
+            cell_elem = browser.find_element_by_css_selector(
+                'div.tile.' + cell_class)
         except Exception:
             return None
     text = cell_elem.find_element_by_class_name('tile-inner').text
@@ -474,51 +482,3 @@ def get_mininum_cell_in_row(row_cells: RowCells) -> int or None:
         if min_cell is None or c < min_cell:
             min_cell = c
     return min_cell
-
-
-def get_actions_for_row(boad, target_row_index: int) -> List[str]:
-    # print('handling row', target_row_index)
-    cells = boad.cells
-    target_row = boad.cells[target_row_index]
-    boad_after_up = boad.load_or_create_boad_after_action('up')
-    target_row_after_up = boad_after_up.cells[target_row_index]
-    # print("boad.is_jointable_by_up()", boad.is_jointable_by_up()    )
-    # print("is_fixed_row(target_row)", is_fixed_row(target_row))
-    # print("boad.will_change_row_by_actions(['right', 'up']", boad.will_change_row_by_actions(['right', 'up'], target_row_index))
-    # print("boad.will_change_row_by_actions(['left', 'up'], target_row_index)", boad.will_change_row_by_actions(['left', 'up'], target_row_index))
-    if is_movable_right_row(cells[target_row_index]):
-        print('target_row_after_up', target_row_after_up)
-        if (
-            not boad.is_same(boad_after_up)
-            and is_row_keeps_larger_right(target_row_after_up)
-            and is_row_filled_right(target_row)
-        ):
-            print('up because top is not filled')
-            return ['up']
-        else:
-            print('right because top is not filled')
-            return ['right']
-    # DONE 右上に小さい駒が入っていたら、そちらに注力したい
-    # TODO その消したい駒より大きいものが存在するなら、まずそれを消したい
-    elif (
-        is_fixed_row(target_row)
-        and (boad.will_change_row_by_actions(['right', 'up'], target_row_index) or boad.will_change_row_by_actions(['left', 'up'], target_row_index))
-        # and is_row_keeps_larger_right(cells[target_row_index])
-    ):
-        if boad.will_change_row_by_actions(['right', 'up'], target_row_index):
-            print('right up to joint right upper')
-            return ['right', 'up']
-        else:
-            print('left up to joint left upper')
-            return ['left', 'up']
-    elif row_has_none(target_row) and there_are_cell_to_fill_row_none(cells, target_row_index):
-        print('up to fill top none')
-        return ['up']
-    elif boad.is_jointable_by_up() and not is_same_row_cells(target_row, target_row_after_up):
-        print('up because jointable upper')
-        return ['up']
-    elif row_has_jointable_cells(target_row):
-        print('right because top have jointable cells')
-        return ['right']
-    print('does not handle row', target_row_index)
-    return None

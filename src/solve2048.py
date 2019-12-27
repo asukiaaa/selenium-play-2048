@@ -29,19 +29,19 @@ while True:
     print(boad.cells)
     next_actions = None
     if next_actions is None:
-        next_actions = utils.get_actions_for_row(boad, 0)
+        next_actions = boad.get_actions_for_row(0)
         if next_actions is not None:
             print('got actions for row 0')
     if next_actions is None:
-        next_actions = utils.get_actions_for_row(boad, 1)
+        next_actions = boad.get_actions_for_row(1)
         if next_actions is not None:
             print('got actions for row 1')
     if next_actions is None:
-        next_actions = utils.get_actions_for_row(boad, 2)
+        next_actions = boad.get_actions_for_row(2)
         if next_actions is not None:
             print('got actions for row 2')
     if next_actions is None:
-        next_actions = utils.get_actions_for_row(boad, 3)
+        next_actions = boad.get_actions_for_row(3)
         if next_actions is not None:
             print('got actions for row 3')
     if next_actions is None:
