@@ -21,36 +21,44 @@ browser.close()
 browser.session_id = session_id
 print(browser.session_id)
 
+boad = None
+
 while True:
-    boad = utils.read_to_create_boad(browser)
+    if boad is None:
+        boad = utils.read_to_create_boad(browser)
     print(boad.cells)
-    else_action = None
-    if utils.handle_for_row(browser, boad, 0):
-        # something if handled for 0
-        print('handled for row 0')
-    elif utils.handle_for_row(browser, boad, 1):
-        # something if handled for 1
-        print('handled for row 1')
-    elif utils.handle_for_row(browser, boad, 2):
-        # something if handled for 1
-        print('handled for row 2')
-    elif utils.handle_for_row(browser, boad, 3):
-        # something if handled for 1
-        print('handled for row 3')
-    elif boad.is_movable_up():
-        print('up as else')
-        utils.go_up(browser)
-    elif boad.is_movable_right():
-        print('right as else')
-        utils.go_right(browser)
-    elif boad.is_movable_left():
-        print('left as else')
-        utils.go_left(browser)
-    elif boad.is_movable_down():
-        print('down up as else')
-        utils.go_down(browser)
-        utils.go_up(browser)
-    else:
+    next_actions = None
+    if next_actions is None:
+        next_actions = utils.get_actions_for_row(boad, 0)
+        if next_actions is not None:
+            print('got actions for row 0')
+    if next_actions is None:
+        next_actions = utils.get_actions_for_row(boad, 1)
+        if next_actions is not None:
+            print('got actions for row 1')
+    if next_actions is None:
+        next_actions = utils.get_actions_for_row(boad, 2)
+        if next_actions is not None:
+            print('got actions for row 2')
+    if next_actions is None:
+        next_actions = utils.get_actions_for_row(boad, 3)
+        if next_actions is not None:
+            print('got actions for row 3')
+    if next_actions is None:
+        if boad.is_movable_up():
+            print('up as else')
+            next_actions = ['up']
+        elif boad.is_movable_right():
+            print('right as else')
+            next_actions = ['right']
+        elif boad.is_movable_left():
+            print('left as else')
+            next_actions = ['left']
+        elif boad.is_movable_down():
+            print('down up as else')
+            next_actions = ['down', 'up']
+    if next_actions is None:
         print('cannot move cells so finish')
         break
+    boad = boad.create_next_by_actions(browser, next_actions)
     gc.collect()

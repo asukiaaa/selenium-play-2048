@@ -3,6 +3,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.remote.webelement import WebElement
 from time import sleep
 from typing import List, TypeVar, Type, Dict
+import re
 
 CellValue = TypeVar('CellType', int, None)
 RowCells = List[CellValue]
@@ -103,6 +104,78 @@ class Boad:
         self.boads_after[key] = boad
         return boad
 
+    def get_actions_to_increase_row(self, target_row_index: int):
+        candidate_actions = [
+            ['up'],
+            ['left'],
+            ['right'],
+            # ['up', 'right'],
+            # ['up', 'left'],
+            ['right', 'up'],
+            ['left', 'up'],
+            ['right', 'right', 'up'],
+            # ['up', 'right', 'up'],
+            ['left', 'left', 'up'],
+            # ['up', 'left', 'up'],
+        ]
+        current_row = self.cells[target_row_index]
+        best_actions_row_points = 0
+        best_actions = None
+        for actions in candidate_actions:
+            boad = self.load_or_create_boad_after_actions(actions)
+            row = boad.cells[target_row_index]
+            if not is_same_row_cells(current_row, row):
+                if is_row_keeps_larger_right(row):
+                    points = get_row_points(row)
+                    if points > best_actions_row_points:
+                        best_actions_row_points = points
+                        best_actions = actions
+        return best_actions
+
+    def create_next_by_actions(self, browser, actions: List[str]):
+        boad = self
+        for action in actions:
+            boad_after_action = boad.load_or_create_boad_after_action(action)
+            tile_go(browser, action)
+            if not boad.is_same(boad_after_action):
+                boad = boad_after_action.create_boad_by_read_and_insert_new_tile(browser)
+        return boad
+
+    def create_boad_by_read_and_insert_new_tile(self, browser):
+        tile = None
+        try:
+            tile = read_new_tile(browser)
+        except Exception:
+            tile = read_new_tile(browser)
+        # print('tile', tile)
+        x = tile['x']
+        y = tile['y']
+        if self.cells[y][x] is not None:
+            raise 'error position for new tile'
+        cells = self.cells.copy()
+        cells[y][x] = tile['value']
+        return Boad(cells)
+
+
+def tile_go(browser, action):
+    if action == 'left':
+        go_left(browser)
+    elif action == 'right':
+        go_right(browser)
+    elif action == 'up':
+        go_up(browser)
+    elif action == 'down':
+        go_down(browser)
+
+
+def get_row_points(row: RowCells):
+    points = 0
+    for x in range(4):
+        c = row[x]
+        if c is not None:
+            points += c
+    return points
+
 
 def go_right(browser, delay_second=go_delay_second):
     actions = ActionChains(browser)
@@ -172,6 +245,18 @@ def go_down(browser, delay_second=go_delay_second):
 #             raise 'cannot read tile numbers'
 
 
+def read_new_tile(browser):
+    elem = browser.find_element_by_css_selector('div.tile.tile-new')
+    class_attr = elem.get_attribute('class')
+    m = re.search(r"tile-position-([1-4])-([1-4])", class_attr)
+    text = elem.find_element_by_class_name('tile-inner').text
+    return {
+        "value": int(text),
+        "x": int(m.group(1)) - 1,
+        "y": int(m.group(2)) - 1,
+    }
+
+
 def read_number_of_cell(browser, x: int, y: int):
     cell_class = "tile-position-{}-{}".format(y+1, x+1)
     cell_elem = None
@@ -187,7 +272,6 @@ def read_number_of_cell(browser, x: int, y: int):
 
 
 def read_boad_cells(browser):
-    print('started to read cells')
     boad_cells = []
     for x in range(4):
         row_cells = []
@@ -198,7 +282,6 @@ def read_boad_cells(browser):
                 print('caused error try again', x, y, e)
                 row_cells.append(read_number_of_cell(browser, x, y))
         boad_cells.append(row_cells)
-    print('finished reading cells')
     return boad_cells
 
 
@@ -364,7 +447,6 @@ def is_row_keeps_larger_right(row_cells: RowCells) -> bool:
     right_index = 1
     while right_index < len(row_cells):
         right = row_cells[right_index]
-        print('left right', left, right)
         if left is not None and right is not None and left > right:
             return False
         if right is not None:
@@ -394,7 +476,7 @@ def get_mininum_cell_in_row(row_cells: RowCells) -> int or None:
     return min_cell
 
 
-def handle_for_row(browser, boad, target_row_index: int) -> bool:
+def get_actions_for_row(boad, target_row_index: int) -> List[str]:
     # print('handling row', target_row_index)
     cells = boad.cells
     target_row = boad.cells[target_row_index]
@@ -412,10 +494,10 @@ def handle_for_row(browser, boad, target_row_index: int) -> bool:
             and is_row_filled_right(target_row)
         ):
             print('up because top is not filled')
-            go_up(browser)
+            return ['up']
         else:
             print('right because top is not filled')
-            go_right(browser)
+            return ['right']
     # DONE 右上に小さい駒が入っていたら、そちらに注力したい
     # TODO その消したい駒より大きいものが存在するなら、まずそれを消したい
     elif (
@@ -425,22 +507,18 @@ def handle_for_row(browser, boad, target_row_index: int) -> bool:
     ):
         if boad.will_change_row_by_actions(['right', 'up'], target_row_index):
             print('right up to joint right upper')
-            go_right(browser)
-            go_up(browser)
+            return ['right', 'up']
         else:
             print('left up to joint left upper')
-            go_left(browser)
-            go_up(browser)
+            return ['left', 'up']
     elif row_has_none(target_row) and there_are_cell_to_fill_row_none(cells, target_row_index):
         print('up to fill top none')
-        go_up(browser)
+        return ['up']
     elif boad.is_jointable_by_up() and not is_same_row_cells(target_row, target_row_after_up):
         print('up because jointable upper')
-        go_up(browser)
+        return ['up']
     elif row_has_jointable_cells(target_row):
         print('right because top have jointable cells')
-        go_right(browser)
-    else:
-        print('does not handle row', target_row_index)
-        return False
-    return True
+        return ['right']
+    print('does not handle row', target_row_index)
+    return None
