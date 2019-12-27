@@ -58,7 +58,7 @@ class Boad:
         return False
 
     def is_movable_up(self) -> bool:
-        return is_movable_left_cells(self.load_or_create_rotated_clockwize_cells())
+        return is_movable_right_cells(self.load_or_create_rotated_clockwize_cells())
 
     def is_movable_right(self) -> bool:
         return is_movable_right_cells(self.cells)
@@ -67,7 +67,7 @@ class Boad:
         return is_movable_left_cells(self.cells)
 
     def is_movable_down(self) -> bool:
-        return is_movable_right_cells(self.load_or_create_rotated_clockwize_cells())
+        return is_movable_left_cells(self.load_or_create_rotated_clockwize_cells())
 
     def will_change_row_by_actions(self, actions: List[str], row_index: int) -> bool:
         boad = self.load_or_create_boad_after_actions(actions)
@@ -174,7 +174,7 @@ def go_down(browser, delay_second=go_delay_second):
 
 def read_number_of_cell(browser, x: int, y: int):
     cell_class = "tile-position-{}-{}".format(y+1, x+1)
-    cell_elems = browser.find_elements_by_class_name(cell_class)
+    cell_elems = browser.find_elements_by_css_selector('div.tile.' + cell_class)
     elems_len = len(cell_elems)
     if elems_len == 0:
         return None
@@ -189,6 +189,7 @@ def read_number_of_cell(browser, x: int, y: int):
 
 
 def read_boad_cells(browser):
+    print('started to read cells')
     boad_cells = []
     for x in range(4):
         row_cells = []
@@ -199,6 +200,7 @@ def read_boad_cells(browser):
                 print('caused error try again', x, y, e)
                 row_cells.append(read_number_of_cell(browser, x, y))
         boad_cells.append(row_cells)
+    print('finished reading cells')
     return boad_cells
 
 
@@ -373,6 +375,16 @@ def is_row_keeps_larger_right(row_cells: RowCells) -> bool:
     return True
 
 
+def is_row_filled_right(row_cells: RowCells) -> bool:
+    prev_cell = None
+    for x in range(4):
+        cell = row_cells[x]
+        if x != 0 and prev_cell is not None and cell is None:
+            return False
+        prev_cell = cell
+    return True
+
+
 def get_mininum_cell_in_row(row_cells: RowCells) -> int or None:
     min_cell = None
     for x in range(4):
@@ -385,18 +397,22 @@ def get_mininum_cell_in_row(row_cells: RowCells) -> int or None:
 
 
 def handle_for_row(browser, boad, target_row_index: int) -> bool:
-    print('handling row', target_row_index)
+    # print('handling row', target_row_index)
     cells = boad.cells
     target_row = boad.cells[target_row_index]
     boad_after_up = boad.load_or_create_boad_after_action('up')
     target_row_after_up = boad_after_up.cells[target_row_index]
-    print("boad.is_jointable_by_up()", boad.is_jointable_by_up()    )
-    print("is_fixed_row(target_row)", is_fixed_row(target_row))
-    print("boad.will_change_row_by_actions(['right', 'up']", boad.will_change_row_by_actions(['right', 'up'], target_row_index))
-    print("boad.will_change_row_by_actions(['left', 'up'], target_row_index)", boad.will_change_row_by_actions(['left', 'up'], target_row_index))
+    # print("boad.is_jointable_by_up()", boad.is_jointable_by_up()    )
+    # print("is_fixed_row(target_row)", is_fixed_row(target_row))
+    # print("boad.will_change_row_by_actions(['right', 'up']", boad.will_change_row_by_actions(['right', 'up'], target_row_index))
+    # print("boad.will_change_row_by_actions(['left', 'up'], target_row_index)", boad.will_change_row_by_actions(['left', 'up'], target_row_index))
     if is_movable_right_row(cells[target_row_index]):
         print('target_row_after_up', target_row_after_up)
-        if not boad.is_same(boad_after_up) and is_row_keeps_larger_right(target_row_after_up):
+        if (
+            not boad.is_same(boad_after_up)
+            and is_row_keeps_larger_right(target_row_after_up)
+            and is_row_filled_right(target_row)
+        ):
             print('up because top is not filled')
             go_up(browser)
         else:

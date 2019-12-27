@@ -21,10 +21,6 @@ browser.close()
 browser.session_id = session_id
 print(browser.session_id)
 
-prev_boad = None
-prev_else_action = None
-boad_on_down = None
-
 while True:
     boad = utils.read_to_create_boad(browser)
     print(boad.cells)
@@ -38,43 +34,23 @@ while True:
     elif utils.handle_for_row(browser, boad, 2):
         # something if handled for 1
         print('handled for row 2')
+    elif utils.handle_for_row(browser, boad, 3):
+        # something if handled for 1
+        print('handled for row 3')
+    elif boad.is_movable_up():
+        print('up as else')
+        utils.go_up(browser)
+    elif boad.is_movable_right():
+        print('right as else')
+        utils.go_right(browser)
+    elif boad.is_movable_left():
+        print('left as else')
+        utils.go_left(browser)
+    elif boad.is_movable_down():
+        print('down up as else')
+        utils.go_down(browser)
+        utils.go_up(browser)
     else:
-        if prev_else_action == 'right' and boad.is_movable_up():
-            print('up as else')
-            else_action = 'up'
-            utils.go_up(browser)
-        elif boad.is_movable_right():
-            print('right as else')
-            else_action = 'right'
-            utils.go_right(browser)
-    prev_else_action = else_action
-    boad = utils.read_to_create_boad(browser)
-    if prev_boad is not None and boad.is_same(prev_boad):
-        print('boad does not change')
-        if boad.is_movable_left():
-            utils.go_left(browser)
-            boad = utils.read_to_create_boad(browser)
-        elif boad.is_movable_down():
-            utils.go_down(browser)
-            print('still same boards')
-            utils.go_right(browser)
-        boad = utils.read_to_create_boad(browser)
-        if boad.is_same(prev_boad):
-            print('same board so up down or finish')
-            print(boad.cells)
-            print(prev_boad.cells)
-            if boad_on_down is None:
-                utils.go_down(browser)
-                utils.go_up(browser)
-                boad = utils.read_to_create_boad(browser)
-                boad_on_down = boad
-            elif not boad.is_same(boad_on_down):
-                boad = utils.read_to_create_boad(browser)
-                utils.go_down(browser)
-                utils.go_up(browser)
-                boad_on_down = boad
-            else:
-                break
-        boad = utils.read_to_create_boad(browser)
-    prev_boad = boad
+        print('cannot move cells so finish')
+        break
     gc.collect()
