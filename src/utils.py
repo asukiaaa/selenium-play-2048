@@ -441,7 +441,6 @@ def create_cells_after_left(cells: BoadCells) -> BoadCells:
     return new_cells
 
 
-# TODO make this as a function in Boad class
 def create_cells_after_right(cells: BoadCells) -> BoadCells:
     new_cells = []
     for y in range(4):
