@@ -264,7 +264,7 @@ def read_new_tile(browser):
 
 
 def read_number_of_cell(browser, x: int, y: int):
-    cell_class = "tile-position-{}-{}".format(y+1, x+1)
+    cell_class = "tile-position-{}-{}".format(x+1, y+1)
     text = None
     try:
         text = browser.find_element_by_css_selector(
@@ -280,9 +280,9 @@ def read_number_of_cell(browser, x: int, y: int):
 
 def read_boad_cells(browser):
     boad_cells = []
-    for x in range(4):
+    for y in range(4):
         row_cells = []
-        for y in range(4):
+        for x in range(4):
             try:
                 row_cells.append(read_number_of_cell(browser, x, y))
             except Exception as e:
