@@ -265,17 +265,16 @@ def read_new_tile(browser):
 
 def read_number_of_cell(browser, x: int, y: int):
     cell_class = "tile-position-{}-{}".format(y+1, x+1)
-    cell_elem = None
+    text = None
     try:
-        cell_elem = browser.find_element_by_css_selector(
-            'div.tile.' + cell_class + '.tile-merged')
+        text = browser.find_element_by_css_selector(
+            'div.tile.' + cell_class + '.tile-merged .tile-inner').text
     except Exception:
         try:
-            cell_elem = browser.find_element_by_css_selector(
-                'div.tile.' + cell_class)
+            text = browser.find_element_by_css_selector(
+                'div.tile.' + cell_class + ' .tile-inner').text
         except Exception:
             return None
-    text = cell_elem.find_element_by_class_name('tile-inner').text
     return int(text)
 
 
