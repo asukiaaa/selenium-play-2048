@@ -29,19 +29,20 @@ while True:
     print(boad.cells)
     next_actions = None
     if next_actions is None:
-        next_actions = boad.get_actions_for_row(0)
+        next_actions = boad.get_actions_for_row(0, 'right')
         if next_actions is not None:
             print('got actions for row 0')
+    target_direction = 'right'
     if next_actions is None:
-        next_actions = boad.get_actions_for_row(1)
+        next_actions = boad.get_actions_for_row(1, target_direction)
         if next_actions is not None:
             print('got actions for row 1')
     if next_actions is None:
-        next_actions = boad.get_actions_for_row(2)
+        next_actions = boad.get_actions_for_row(2, target_direction)
         if next_actions is not None:
             print('got actions for row 2')
     if next_actions is None:
-        next_actions = boad.get_actions_for_row(3)
+        next_actions = boad.get_actions_for_row(3, target_direction)
         if next_actions is not None:
             print('got actions for row 3')
     if next_actions is None:
@@ -60,5 +61,5 @@ while True:
     if next_actions is None:
         print('cannot move cells so finish')
         break
-    boad = boad.create_next_by_actions(browser, next_actions)
+    boad = boad.create_next_by_actions(browser, [next_actions[0]])
     gc.collect()

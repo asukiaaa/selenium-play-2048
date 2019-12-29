@@ -10,6 +10,33 @@ RowCells = List[CellValue]
 BoadCells = List[RowCells]
 go_delay_second = 0.1
 
+right_actions = [
+    ['right'],
+    ['right', 'up'],
+    ['right', 'right', 'up'],
+    ['right', 'right', 'right', 'up'],
+]
+left_actions = [
+    ['left'],
+    ['left', 'up'],
+    ['left', 'left', 'up'],
+    ['left', 'left', 'left', 'up'],
+]
+candidate_actions_for_right = [
+    ['up'],
+] + right_actions + left_actions
+candidate_actions_for_left = [
+    ['up']
+] + left_actions + right_actions
+
+
+def click_keep_playing_button(browser):
+    try:
+        browser.find_element_by_css_selector('.keep-playing-button').click()
+        return True
+    except Exception:
+        return False
+
 
 def is_same_row_cells(row1: RowCells, row2: RowCells):
     for x in range(4):
@@ -104,32 +131,22 @@ class Boad:
         self.boads_after[key] = boad
         return boad
 
-    def get_actions_for_row(self, target_row_index: int):
-        candidate_actions = [
-            ['up'],
-            ['right'],
-            ['left'],
-            # ['up', 'right'],
-            # ['up', 'left'],
-            ['right', 'up'],
-            ['right', 'right', 'up'],
-            ['left', 'up'],
-            # # ['up', 'right', 'up'],
-            ['left', 'left', 'up'],
-            # # ['up', 'left', 'up'],
-            # ['up', 'up'],
-        ]
+    def get_actions_for_row(self, target_row_index: int, direction: str):
+        is_direction_right = direction == 'right'
+        candidate_actions = candidate_actions_for_right if is_direction_right else candidate_actions_for_left
         current_row = self.cells[target_row_index]
         best_actions_row_points = 0
         best_actions = None
-        need_to_keep_larger = is_row_keeps_larger_right(current_row)
+        need_to_keep_larger = is_row_keeps_larger_right(current_row) if is_direction_right else is_row_keeps_larger_left(current_row)
         for actions in candidate_actions:
             boad = self.load_or_create_boad_after_actions(actions)
             row = boad.cells[target_row_index]
+            is_row_filled = is_row_filled_right(row) if is_direction_right else is_row_filled_left(row)
+            is_row_keeps_larger = is_row_keeps_larger_right(row) if is_direction_right else is_row_keeps_larger_left(row)
             if (
                 not is_same_row_cells(current_row, row)
-                and (not need_to_keep_larger or is_row_keeps_larger_right(row))
-                and is_row_filled_right(row)
+                and (not need_to_keep_larger or is_row_keeps_larger)
+                and is_row_filled
             ):
                 points = get_row_points(row)
                 if points > best_actions_row_points:
@@ -448,6 +465,12 @@ def create_cells_after_right(cells: BoadCells) -> BoadCells:
     return new_cells
 
 
+def is_row_keeps_larger_left(row_cells: RowCells) -> bool:
+    row = row_cells.copy()
+    row.reverse()
+    return is_row_keeps_larger_right(row)
+
+
 def is_row_keeps_larger_right(row_cells: RowCells) -> bool:
     left = row_cells[0]
     right_index = 1
@@ -459,6 +482,12 @@ def is_row_keeps_larger_right(row_cells: RowCells) -> bool:
             left = right
         right_index += 1
     return True
+
+
+def is_row_filled_left(row_cells: RowCells) -> bool:
+    row = row_cells.copy()
+    row.reverse()
+    return is_row_filled_right(row)
 
 
 def is_row_filled_right(row_cells: RowCells) -> bool:
