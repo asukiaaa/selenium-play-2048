@@ -181,14 +181,17 @@ class Boad:
 
 
 def tile_go(browser, action):
+    actions = ActionChains(browser)
     if action == 'left':
-        go_left(browser)
+        actions.send_keys(Keys.ARROW_LEFT)
     elif action == 'right':
-        go_right(browser)
+        actions.send_keys(Keys.ARROW_RIGHT)
     elif action == 'up':
-        go_up(browser)
+        actions.send_keys(Keys.ARROW_UP)
     elif action == 'down':
-        go_down(browser)
+        actions.send_keys(Keys.ARROW_DOWN)
+    actions.perform()
+    sleep(go_delay_second)
 
 
 def get_row_points(row: RowCells):
@@ -199,33 +202,6 @@ def get_row_points(row: RowCells):
             points += c
     return points
 
-
-def go_right(browser, delay_second=go_delay_second):
-    actions = ActionChains(browser)
-    actions.send_keys(Keys.ARROW_RIGHT)
-    actions.perform()
-    sleep(delay_second)
-
-
-def go_left(browser, delay_second=go_delay_second):
-    actions = ActionChains(browser)
-    actions.send_keys(Keys.ARROW_LEFT)
-    actions.perform()
-    sleep(delay_second)
-
-
-def go_up(browser, delay_second=go_delay_second):
-    actions = ActionChains(browser)
-    actions.send_keys(Keys.ARROW_UP)
-    actions.perform()
-    sleep(delay_second)
-
-
-def go_down(browser, delay_second=go_delay_second):
-    actions = ActionChains(browser)
-    actions.send_keys(Keys.ARROW_DOWN)
-    actions.perform()
-    sleep(delay_second)
 
 # def get_number_of_cell_from_tile_emenents(elements: [WebElement], x: int, y: int) -> CellValue:
 #     cell_class = "tile-position-{}-{}".format(y+1, x+1)
