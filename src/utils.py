@@ -30,6 +30,14 @@ candidate_actions_for_left = [
 ] + left_actions + right_actions
 
 
+def won_game(browser):
+    try:
+        browser.find_element_by_css_selector('div.game-message.game-won')
+        return True
+    except Exception:
+        return False
+
+
 def click_keep_playing_button(browser):
     try:
         browser.find_element_by_css_selector('.keep-playing-button').click()

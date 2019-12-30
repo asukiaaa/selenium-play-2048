@@ -27,6 +27,10 @@ while True:
     if boad is None:
         boad = utils.read_to_create_boad(browser)
     print(boad.cells)
+    if utils.won_game(browser):
+        print('won game')
+        break
+        # utils.click_keep_playing_button(browser)
     next_actions = None
     if next_actions is None:
         next_actions = boad.get_actions_for_row(0, 'right')
